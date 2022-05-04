@@ -165,9 +165,13 @@ class GnnSemantic:
         self.log_prob = None
 
         # Process indexes for graph construction
-        self.edges, self.incoming_edges, self.predicate_ids = get_graph_structure(self.nb_objects)
+        self.edges, self.incoming_edges, _ = get_graph_structure(self.nb_objects)
 
-        dim_mp_input = 6 + 2  # 2 * nb_position_dimensions + nb_predicates
+        self.predicate_ids = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15], 
+                              [16, 17, 18, 19], [20, 21, 22, 23]
+                             ]
+
+        dim_mp_input = 6 + 4  # 2 * nb_position_dimensions + nb_predicates
         dim_mp_output = 3 * dim_mp_input
 
         dim_phi_actor_input = self.dim_body + self.dim_object + dim_mp_output

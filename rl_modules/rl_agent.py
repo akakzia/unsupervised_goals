@@ -6,7 +6,8 @@ from rl_modules.networks import QNetworkFlat, GaussianPolicyFlat
 from mpi_utils.normalizer import normalizer
 from her_modules.her import her_sampler
 from updates import update_flat, update_deepsets
-from utils import id_to_language
+from vq_models.vq_vae import VQModel
+from itertools import permutations
 
 
 """
@@ -33,6 +34,16 @@ class RLAgent:
 
         # create the network
         self.architecture = self.args.architecture
+
+        # Define VQ-VAE mapping function
+        self.vq_vae_z = VQModel(input_dim=6, hidden_dim=256, num_embeddings=16, embedding_dim=2, commitment_cost=0.25, output_dim=1)
+        self.vq_vae_xy = VQModel(input_dim=6, hidden_dim=256, num_embeddings=2, embedding_dim=2, commitment_cost=0.25, output_dim=1)
+        # Load trained models 
+        vq_vae_z_params = torch.load('vq_models/vertical_model.pt', map_location=lambda storage, loc: storage)[0]
+        self.vq_vae_z.load_state_dict(vq_vae_z_params)
+
+        vq_vae_xy_params = torch.load('vq_models/plan_model.pt', map_location=lambda storage, loc: storage)[0]
+        self.vq_vae_xy.load_state_dict(vq_vae_xy_params)
 
         if self.architecture == 'flat':
             self.actor_network = GaussianPolicyFlat(self.env_params)
@@ -133,8 +144,8 @@ class RLAgent:
         with torch.no_grad():
             # normalize policy inputs
             obs_norm = self.o_norm.normalize(obs)
-            ag_norm = torch.tensor(self.g_norm.normalize(ag), dtype=torch.float32).unsqueeze(0)
-            g_norm = torch.tensor(self.g_norm.normalize(g), dtype=torch.float32).unsqueeze(0)
+            ag_norm = torch.tensor(ag, dtype=torch.float32).unsqueeze(0)
+            g_norm = torch.tensor(g, dtype=torch.float32).unsqueeze(0)
             if self.architecture == 'gnn':
                 obs_tensor = torch.tensor(obs_norm, dtype=torch.float32).unsqueeze(0)
                 if self.args.cuda:
@@ -153,6 +164,28 @@ class RLAgent:
 
         return action.copy()
     
+    def get_vq_mapping(self, obs):
+        # Compute goals
+        obs_objects = [obs[10 + 15*i : 13 + 15*i] for i in range(3)]
+        temp_g = []
+        for o1, o2 in permutations(obs_objects, 2):
+            inp = np.expand_dims(np.stack([o1, o2]), axis=0)
+            inp_tensor = torch.Tensor(inp)
+            with torch.no_grad():
+                z_z = self.vq_vae_z._encoder(inp_tensor)
+                _, quantized_z, _, _ = self.vq_vae_z._vq_vae(z_z)
+
+                z_xy = self.vq_vae_xy._encoder(inp_tensor)
+                _, quantized_xy, _, _ = self.vq_vae_xy._vq_vae(z_xy)
+            
+            temp_1 = quantized_z.detach().numpy().squeeze()
+            temp_2 = quantized_xy.detach().numpy().squeeze()
+
+            temp_g.append(np.concatenate([temp_1, temp_2]))
+        
+        res = np.concatenate(temp_g, axis=-1)
+        return res
+
     def store(self, episodes):
         self.buffer.store_episode(episode_batch=episodes)
 

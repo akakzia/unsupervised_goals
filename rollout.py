@@ -21,11 +21,14 @@ class RolloutWorker:
         for i in range(goals.shape[0]):
             observation = self.env.unwrapped.reset_goal(goal=np.array(goals[i]), biased_init=biased_init)
             obs = observation['observation']
-            ag = observation['achieved_goal']
-            ag_bin = observation['achieved_goal_binary']
-            g = observation['desired_goal']
-            g_bin = observation['desired_goal_binary']
 
+            # ag = observation['achieved_goal']
+            # ag_bin = observation['achieved_goal_binary']
+            ag = self.policy.get_vq_mapping(obs)
+            ag_bin = ag.copy()
+
+            g = goals[i]
+            g_bin = goals[i]
 
             ep_obs, ep_ag, ep_ag_bin, ep_g, ep_g_bin, ep_actions, ep_success, ep_rewards = [], [], [], [], [], [], [], []
 
@@ -42,8 +45,11 @@ class RolloutWorker:
 
                 observation_new, r, _, _ = self.env.step(action)
                 obs_new = observation_new['observation']
-                ag_new = observation_new['achieved_goal']
-                ag_new_bin = observation_new['achieved_goal_binary']
+
+                # ag_new = observation_new['achieved_goal']
+                # ag_new_bin = observation_new['achieved_goal_binary']
+                ag_new = self.policy.get_vq_mapping(obs_new)
+                ag_new_bin = ag_new.copy()
 
                 # Append rollouts
                 ep_obs.append(obs.copy())
@@ -63,6 +69,9 @@ class RolloutWorker:
             ep_obs.append(obs.copy())
             ep_ag.append(ag.copy())
             ep_ag_bin.append(ag_bin.copy())
+            
+            # Compute goals
+            
 
             # Gather everything
             episode = dict(obs=np.array(ep_obs).copy(),
