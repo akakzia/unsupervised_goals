@@ -39,12 +39,16 @@ class RLAgent:
         self.vq_vae_z = VQModel(input_dim=6, hidden_dim=256, num_embeddings=16, embedding_dim=2, commitment_cost=0.25, output_dim=1)
         self.vq_vae_xy = VQModel(input_dim=6, hidden_dim=256, num_embeddings=2, embedding_dim=2, commitment_cost=0.25, output_dim=1)
         # Load trained models 
-        vq_vae_z_params = torch.load('vq_models/vertical_model.pt', map_location=lambda storage, loc: storage)[0]
+        vq_vae_z_params = torch.load('vq_models/vertical_model.pt', map_location="cuda:0")[0]
         self.vq_vae_z.load_state_dict(vq_vae_z_params)
 
-        vq_vae_xy_params = torch.load('vq_models/plan_model.pt', map_location=lambda storage, loc: storage)[0]
+        vq_vae_xy_params = torch.load('vq_models/plan_model.pt', map_location="cuda:0")[0]
         self.vq_vae_xy.load_state_dict(vq_vae_xy_params)
 
+        if self.args.cuda:
+            self.vq_vae_z.cuda()
+            self.vq_vae_xy.cuda()
+            
         if self.architecture == 'flat':
             self.actor_network = GaussianPolicyFlat(self.env_params)
             self.critic_network = QNetworkFlat(self.env_params)
