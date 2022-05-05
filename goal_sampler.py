@@ -27,7 +27,8 @@ class GoalSampler:
         evaluation controls whether or not to sample the goal uniformly or according to curriculum
         """
         if evaluation and len(self.discovered_goals) > 0:
-            goals = np.random.choice(self.discovered_goals, size=self.num_rollouts_per_mpi)
+            # goals = np.random.choice(self.discovered_goals, size=self.num_rollouts_per_mpi)
+            goals = np.array(self.discovered_goals)
             self_eval = False
         else:
             if len(self.discovered_goals) == 0:
@@ -53,8 +54,9 @@ class GoalSampler:
             all_episode_list = [e for eps in all_episodes for e in eps]
 
             for e in all_episode_list:
+                condition = str(e['ag_binary'][-1]) == str(e['ag_binary'][-2]) == str(e['ag_binary'][-3]) == str(e['ag_binary'][-4]) == str(e['ag_binary'][-5])
                 # Add last achieved goal to memory if first time encountered
-                if str(e['ag_binary'][-1]) not in self.discovered_goals_str:
+                if condition and str(e['ag_binary'][-1]) not in self.discovered_goals_str:
                     self.discovered_goals.append(e['ag_binary'][-1].copy())
                     self.discovered_goals_str.append(str(e['ag_binary'][-1]))
 
@@ -105,13 +107,13 @@ class GoalSampler:
     def init_stats(self):
         self.stats = dict()
         # Number of classes of eval
-        if self.goal_dim == 30:
-            n = 12
-        else:
-            n = 6
-        for i in np.arange(1, n+1):
-            self.stats['Eval_SR_{}'.format(i)] = []
-            self.stats['Av_Rew_{}'.format(i)] = []
+        # if self.goal_dim == 30:
+        #     n = 12
+        # else:
+        #     n = 6
+        # for i in np.arange(1, n+1):
+        #     self.stats['Eval_SR_{}'.format(i)] = []
+        #     self.stats['Av_Rew_{}'.format(i)] = []
         self.stats['epoch'] = []
         self.stats['episodes'] = []
         self.stats['global_sr'] = []
@@ -128,8 +130,8 @@ class GoalSampler:
         for k in time_dict.keys():
             self.stats['t_{}'.format(k)].append(time_dict[k])
         self.stats['nb_discovered'].append(len(self.discovered_goals))
-        for g_id in np.arange(1, len(av_res) + 1):
-            self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
-            self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])
+        # for g_id in np.arange(1, len(av_res) + 1):
+        #     self.stats['Eval_SR_{}'.format(g_id)].append(av_res[g_id-1])
+        #     self.stats['Av_Rew_{}'.format(g_id)].append(av_rew[g_id-1])
             # self.stats['#Rew_{}'.format(g_id)].append(self.rew_counters[oracle_id])
             # self.stats['#Target_{}'.format(g_id)].append(self.target_counters[oracle_id])

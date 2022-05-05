@@ -178,8 +178,8 @@ class RLAgent:
                 z_xy = self.vq_vae_xy._encoder(inp_tensor)
                 _, quantized_xy, _, _ = self.vq_vae_xy._vq_vae(z_xy)
             
-            temp_1 = quantized_z.detach().numpy().squeeze()
-            temp_2 = quantized_xy.detach().numpy().squeeze()
+            temp_1 = np.around(quantized_z.detach().numpy().squeeze(), decimals=2)
+            temp_2 = np.around(quantized_xy.detach().numpy().squeeze(), decimals=1)
 
             temp_g.append(np.concatenate([temp_1, temp_2]))
         
